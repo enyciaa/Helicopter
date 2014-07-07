@@ -1,0 +1,102 @@
+#:kivy 1.8.0
+
+<StartPopUp>       
+	app: app  
+	   
+    size_hint: self.popup_size
+    auto_dismiss: False
+    title: 'Welcome'
+    Button:
+        text: 'Play'
+        on_press: root.start_click()
+        on_press: root.dismiss()  
+
+<Score>
+	game: app.game
+	
+	BoxLayout:
+		orientation: 'horizontal'
+		size: 800, 60
+		Label:
+			text: 'Score:'
+		Label:
+			text: str(root.score_display)
+		BoxLayout:							
+			size_hint: 10, 1	    #blank box to force other labels into left and right of bar	
+		Label:
+			text: 'High Score:'	
+		Label:
+			text: str(root.high_score)		
+
+<Background>
+	game: app.game
+	
+    canvas.before: 
+    	Rectangle:
+	    	texture: self.texture_back
+	        pos: self.pos 
+	        size: self.size
+	        tex_coords: self.texture_coords_back
+        Rectangle:
+        	texture: self.texture_mid
+            pos: self.pos
+            size: self.size
+            tex_coords: self.texture_coords_mid 
+            
+<Tunnel>
+	game: app.game
+	canvas:
+        Mesh:    
+            vertices: self.vertices_top
+            indices: self.indices_top
+            mode: 'line_strip'        
+        Mesh:    
+            vertices: self.vertices_bot
+            indices: self.indices_bot
+            mode: 'line_strip'     
+			
+<Obstacle>
+	game: app.game	
+    canvas:
+        Rectangle:
+            source: 'Images/Bird.png'
+            pos: self.pos
+            size: root.size  			   	
+			        
+<Helicopter>
+	game: app.game
+    canvas:
+        Rectangle:
+        	source: 'Images/helicopter.png'
+            pos: self.pos
+            size: self.size    
+	
+<HelicopterGame>
+	app: app
+	helicopter: helicopter_obj
+	background: background_obj
+	tunnel: tunnel_obj
+	score: score_obj
+	
+	###BoxLayout here ensures the background is added to the whole screen, not just the bottom left corner        
+	BoxLayout
+		orientation: 'vertical'
+		size: root.size        
+		FloatLayout:           
+			Background:
+		        id: background_obj  
+
+		    Tunnel:
+		    	id: tunnel_obj   
+		    	
+		    Helicopter:
+				id: helicopter_obj
+				size_hint: self.sizing
+				x: root.width/6
+				center_y: root.center_y	
+				
+			RelativeLayout:
+				Score:
+					id: score_obj			        
+		            
+	
