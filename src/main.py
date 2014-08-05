@@ -1,19 +1,18 @@
 '''
 ADDED
--Added scores
--Made back background scroll
--Obstacle sizing changed to percentages
--Made tunnel percentages
--Added delta time
--Made velocitys related to screen size/resoloution
+-Added game over screen
+-Altered helicopter movement slightly, would it be better to make it tapping?
+-Added texture to walls
 
 TODO
--Refactor
--A 'You crashed pop up' to prevent quick restarting
 -Work out how best to do delta time
 -Work out best way to make movement based on screen size
--Add texture to walls
 -Alter how tunnel collisions/new obstacle position is calculated
+
+-first experiment with uv points a little
+-Idea to make tunnel work.  Have 2 generated sections.  Generate first two once left section
+is off screen remove and generate new section.  Will let triangle fan work.
+-first point of generation is +/- the last point of the previous generation
 
 '''
 
@@ -35,6 +34,32 @@ from kivy.uix.popup import Popup
 from kivy.modules import inspector
 from random import randrange
 import random
+
+class GameOver(Widget):
+    app = ObjectProperty(None)
+    
+    'Change pop up size'
+    width_factor = NumericProperty(0.5)
+    height_factor = NumericProperty(0.3)    
+    
+    x_size = NumericProperty(0)
+    y_size = NumericProperty(0)
+    x_center = NumericProperty(0)
+    y_center = NumericProperty(0)
+    
+    def __init__(self, app, *args, **kwargs):
+        super(GameOver, self).__init__(*args, **kwargs)
+        self.app = app
+        self.sizing()    #sizing has to be before positioning.  otherwise the center of widget is unknown
+        self.position()
+    
+    def sizing(self):
+        self.x_size = self.app.game.width * self.width_factor
+        self.y_size = self.app.game.height * self.height_factor
+        
+    def position(self, *args):
+        self.x_center = self.app.game.width/2 
+        self.y_center = self.app.game.height/2
 
 class StartPopUp(Popup):
     app = ObjectProperty(None)
@@ -153,7 +178,7 @@ class Tunnel(Widget):
     gap = NumericProperty(0)
     new_bot_y = NumericProperty(0)
     indice = 0
-    
+        
     def start(self, *args):
         #Platform scaling calculations
         self.velocity = self.game.width * self.velocity_factor
@@ -174,7 +199,7 @@ class Tunnel(Widget):
     
     def generate_tunnel(self):
         #First point
-        self.vertices_bot = self.vertice_left_x, 0, 0, 0
+        self.vertices_bot = self.vertice_left_x, 0, 1, 1
         self.indices_bot.append(0)
         self.vertices_top = self.vertice_left_x, self.game.height, 0, 0
         self.indices_top.append(0)
@@ -184,13 +209,13 @@ class Tunnel(Widget):
             self.indice = self.indice+1
             y_bot = self.start_thickness
             y_top = self.gap + self.start_thickness
-            self.vertices_bot.extend([x, y_bot, 0, 0])
+            self.vertices_bot.extend([x, y_bot, 1, 1])
             self.indices_bot.append(self.indice)
             self.vertices_top.extend([x, y_top, 0, 0])
             self.indices_top.append(self.indice)
         
         #Last point    
-        self.vertices_bot.extend([self.vertice_right_x, 0, 0, 0])
+        self.vertices_bot.extend([self.vertice_right_x, 0, 1, 1])
         self.indices_bot.extend([self.indice+1])   
         self.vertices_top.extend([self.vertice_right_x, self.game.height, 0, 0])
         self.indices_top.extend([self.indice+1]) 
@@ -318,14 +343,16 @@ class Helicopter(Widget):
     'Helicopter physics'
     velocity_factor = NumericProperty(0.0008)
     acceleration_factor = NumericProperty(0.0006)
-    
     'helicopter size'
     sizing = ListProperty([0.09, 0.12])
+    'max accelleration'
+    max_accel_factor = NumericProperty(20)
     
     start_position = ([])
     
-    general_velocity = NumericProperty(1.2)
-    general_acceleration = NumericProperty(0.4)
+    general_velocity = NumericProperty(0)
+    general_acceleration = NumericProperty(0)
+    max_acceleration = NumericProperty(0)
     
     start_x = NumericProperty(0)
     start_y = NumericProperty(0)
@@ -347,10 +374,11 @@ class Helicopter(Widget):
     def start(self):
         self.general_velocity = self.game.height * self.velocity_factor
         self.general_acceleration = self.game.height * self.acceleration_factor
+        self.max_acceleration = self.general_acceleration * 20
         self.velocity_x = 0
         self.velocity_y = 0
         self.acceleration_x = 0
-        self.acceleration_y = 0
+        self.acceleration_y = 5
         #bit of a hacky way to get start position of helicopter for game restart
         #better way?
         if self.got_start_pos == False:
@@ -367,20 +395,27 @@ class Helicopter(Widget):
     def move(self):
         if self.touched_down:
             self.acceleration = Vector(0,self.acceleration_y + self.general_acceleration)
+            if self.acceleration[1] > self.max_acceleration:
+                self.acceleration[1] = self.max_acceleration
             self.velocity = Vector(0,self.general_velocity) + Vector(*self.acceleration)
-            self.pos = (Vector(*self.velocity) * self.game.app.fps_adj_factor) + self.pos
+            self.velocity = Vector(*self.velocity) * self.game.app.fps_adj_factor
+            self.pos = Vector(*self.velocity) + self.pos
 
         else:
             self.acceleration = Vector(0,self.acceleration_y - self.general_acceleration)
+            if self.acceleration[1] < -(self.max_acceleration):
+                self.acceleration[1] = -(self.max_acceleration)
             self.velocity = Vector(0,-self.general_velocity) + Vector(*self.acceleration)
-            self.pos = (Vector(*self.velocity) * self.game.app.fps_adj_factor) + self.pos
+            self.velocity = Vector(*self.velocity) * self.game.app.fps_adj_factor
+            self.pos = Vector(*self.velocity) + self.pos
             
     def obstacle_collision(self):
         for obstacle in self.game.obstacles:
             if self.collide_widget(obstacle):
                 self.game.end_game()
     
-    'very hacky, need to fix'
+    #If helicopter hits certain point in tunnel
+    #If numer of points in tunnel changes this needs changed
     def tunnel_collision(self):
         cond1 = (self.height+self.y) > self.game.tunnel.vertices_top[21]
         cond2 = self.y < self.game.tunnel.vertices_bot[21]
@@ -400,7 +435,10 @@ class HelicopterGame(Widget):
     obstacles = ListProperty([])
     
     'time until first obstacle'
-    time_first_ob = NumericProperty(1)   
+    time_first_ob = NumericProperty(1) 
+    'Seconds times_up pop up is visible for'  
+    gameover_time = NumericProperty(2)
+    'Starting game state'  
     game_state = BooleanProperty(False)
     
     #Runs when popup is clicked        
@@ -432,8 +470,10 @@ class HelicopterGame(Widget):
         Clock.unschedule(self.add_obstacle)     #unscheduled incase game ends before event fires
         self.helicopter.touched_down = False    #Need this line as the on_touch_up event isn't fired when the helicopter crashes
         self.score.new_high_score()
-        self.app.start_popup()     
+        self.app.game_over()
+        Clock.schedule_once(self.app.start_popup, self.gameover_time)   
     
+    #Runs on clock interval in app class
     def update(self, dt):
         if self.game_state:
             self.app.delta_time()
@@ -446,8 +486,9 @@ class HelicopterGame(Widget):
                 obstacle.update()   
 
 class HelicopterApp(App):
-    game = ObjectProperty()
-    startpopup = ObjectProperty()
+    game = ObjectProperty(None)
+    startpopup = ObjectProperty(None)
+    gameover = ObjectProperty(None)
 
     fps = NumericProperty(60)
     current_fps = NumericProperty(60)
@@ -463,7 +504,7 @@ class HelicopterApp(App):
         Clock.schedule_interval(self.game.update, 1/self.fps)
                
         #inspector.create_inspector(Window, self.game)
-
+        
         return self.game        
     
     def delta_time(self):
@@ -472,9 +513,14 @@ class HelicopterApp(App):
             self.current_fps = 60
         self.fps_adj_factor = self.fps / float(self.current_fps)
     
-    def start_popup(self, *args):    
+    def game_over(self):
+        self.gameover = GameOver(self)   #Needs declared here rather than in build otherwise initilised wrongly
+        self.game.add_widget(self.gameover)  
+    
+    def start_popup(self, *args):
+        self.game.remove_widget(self.gameover)    
         self.startpopup.open() 
-
+    
 if __name__ == '__main__':
     HelicopterApp().run()
 

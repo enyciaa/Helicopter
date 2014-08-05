@@ -1,5 +1,32 @@
 #:kivy 1.8.0
 
+<DisplayText@Label>
+	font_name: 'Fonts/PressStart2P.ttf'
+	bold: True
+	color: 0.5, 0.5, 0.5, 1
+	font_size: 20	
+
+<DisplayScore@Label> 
+	font_name: 'Fonts/PressStart2P.ttf' 
+	bold: True  
+	color: 0.5, 0.5, 0.5, 1    
+	font_size: 15
+
+<GameOver>
+	app: app 
+		
+	BoxLayout:
+		orientation: 'vertical'
+		size: root.x_size, root.y_size
+		center: root.x_center, root.y_center
+		DisplayText:
+			size_hint: 1, 5
+			text: 'Game Over'
+		DisplayScore:
+			text: 'Distance Reached'	
+		DisplayScore:
+			text: str(root.app.game.score.score_display)	
+
 <StartPopUp>       
 	app: app  
 	   
@@ -16,7 +43,7 @@
 	
 	BoxLayout:
 		orientation: 'horizontal'
-		size: 800, 60
+		size: root.width, root.height/10
 		Label:
 			text: 'Score:'
 		Label:
@@ -46,20 +73,23 @@
 <Tunnel>
 	game: app.game
 	canvas:
+		Color: 
+			rgba: 0.122, 0.82, 0.098, 1
         Mesh:    
             vertices: self.vertices_top
             indices: self.indices_top
-            mode: 'line_strip'        
+            mode: 'triangle_fan'        
         Mesh:    
-            vertices: self.vertices_bot
-            indices: self.indices_bot
-            mode: 'line_strip'     
+            vertices: root.vertices_bot
+            indices: root.indices_bot
+            mode: 'triangle_fan'     
 			
 <Obstacle>
 	game: app.game	
     canvas:
+    	Color: 
+			rgba: 0.122, 0.82, 0.098, 1 
         Rectangle:
-            source: 'Images/Bird.png'
             pos: self.pos
             size: root.size  			   	
 			        
@@ -85,15 +115,15 @@
 		FloatLayout:           
 			Background:
 		        id: background_obj  
-
-		    Tunnel:
-		    	id: tunnel_obj   
-		    	
-		    Helicopter:
+			
+			Helicopter:
 				id: helicopter_obj
 				size_hint: self.sizing
 				x: root.width/6
 				center_y: root.center_y	
+			
+		    Tunnel:
+		    	id: tunnel_obj   
 				
 			RelativeLayout:
 				Score:
