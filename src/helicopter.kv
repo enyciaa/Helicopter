@@ -1,5 +1,6 @@
 #:kivy 1.8.0
 
+###Templates###
 <DisplayText@Label>
 	font_name: 'Fonts/PressStart2P.ttf'
 	bold: True
@@ -12,6 +13,7 @@
 	color: 0.5, 0.5, 0.5, 1    
 	font_size: 15
 
+###Widgets###
 <GameOver>
 	app: app 
 		
@@ -30,13 +32,22 @@
 <StartPopUp>       
 	app: app  
 	   
-    size_hint: self.popup_size
-    auto_dismiss: False
-    title: 'Welcome'
-    Button:
-        text: 'Play'
-        on_press: root.start_click()
-        on_press: root.dismiss()  
+    size_hint: root.popup_size
+    background_color: 0, 0, 0, 0
+    BoxLayout:
+    	size: root.size
+    	orientation: 'vertical'
+		Button:
+			id: play_but
+	    	background_color: 0, 0, 0, 0
+	    	font_name: 'Fonts/PressStart2P.ttf'
+	    	font_size: sp(root.font_size)
+	    	color: root.text_col_norm
+	        text: 'Play'
+	    Label:
+	    	font_name: 'Fonts/PressStart2P.ttf'
+	    	font_size: sp(10)
+	    	text: 'A Boundless Production'    
 
 <Score>
 	game: app.game

@@ -1,14 +1,10 @@
 '''
 ADDED
--Added game over screen
--Altered helicopter movement slightly, would it be better to make it tapping?
--Added texture to walls
 
 TODO
--Work out how best to do delta time
--Work out best way to make movement based on screen size
--Alter how tunnel collisions/new obstacle position is calculated
+-why is begin button not transparent?
 
+-TRY EXTENDING TERRAIN RIGHT OFF SCREEN TO GET RID OF WEIRD GRAPHICS CHANGING
 -first experiment with uv points a little
 -Idea to make tunnel work.  Have 2 generated sections.  Generate first two once left section
 is off screen remove and generate new section.  Will let triangle fan work.
@@ -31,6 +27,7 @@ from kivy.properties import ListProperty, NumericProperty, \
 	ObjectProperty, BooleanProperty, ReferenceListProperty
 from kivy.vector import Vector
 from kivy.uix.popup import Popup
+from kivy.uix.modalview import ModalView
 from kivy.modules import inspector
 from random import randrange
 import random
@@ -61,14 +58,43 @@ class GameOver(Widget):
         self.x_center = self.app.game.width/2 
         self.y_center = self.app.game.height/2
 
-class StartPopUp(Popup):
+class StartPopUp(ModalView):
     app = ObjectProperty(None)
     
     'Popup size'
-    popup_size = ListProperty([.2, .2])
-           
-    def start_click(self):
-        self.app.game.start_game() 
+    popup_size = 0.6, 0.3
+    'Font size'
+    font_size = 25
+    'Normal text color'
+    text_col_norm = 1, 1, 1, 1
+    'Pressed down text color'
+    text_col_pres = 1, 1, 1, 0.4 
+    
+    pressed_down = BooleanProperty(False)
+    
+    #when button is clicked text becomes translucent  
+    def on_touch_down(self, touch):
+        if self.ids.play_but.collide_point(touch.x, touch.y):          #checks if the touch collides with he button widget
+            self.pressed_down = True
+            self.ids.play_but.color = self.text_col_pres
+    
+    #when touch moves off text, text returns to normal color     
+    def on_touch_move(self, touch):
+        cond1 = self.pressed_down
+        cond2 = self.ids.play_but.collide_point(touch.x, touch.y) == False
+        if cond1 and cond2:
+            self.pressed_down = False
+            self.ids.play_but.color = self.text_col_norm 
+            
+    #on button click start the game
+    def on_touch_up(self, touch):
+        cond1 = self.pressed_down
+        cond2 = self.ids.play_but.collide_point(touch.x, touch.y)
+        if cond1 and cond2:
+            self.pressed_down = False
+            self.ids.play_but.color = self.text_col_norm 
+            self.app.game.start_game()  
+            self.dismiss() 
         
 class Score(Widget):
     game = ObjectProperty(None)
